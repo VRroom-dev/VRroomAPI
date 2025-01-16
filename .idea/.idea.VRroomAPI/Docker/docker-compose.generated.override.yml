@@ -1,0 +1,21 @@
+# This is a generated file. Not intended for manual editing.
+services:
+  vrroomapi:
+    build:
+      context: "C:\\Users\\Koneko\\Documents\\GitHub\\VRroomAPI"
+      dockerfile: "Dockerfile"
+      target: "base"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net9.0/VRroomAPI.dll"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+    image: "vrroomapi:dev"
+    ports: []
+    volumes:
+    - "C:\\Users\\Koneko\\.nuget\\packages:/home/app/.nuget/packages"
+    - "C:\\Users\\Koneko\\Documents\\GitHub\\VRroomAPI:/app:rw"
+    - "C:\\Users\\Koneko\\Documents\\GitHub\\VRroomAPI:/src:rw"
+    working_dir: "/app"

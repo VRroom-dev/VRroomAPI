@@ -1,0 +1,9 @@
+﻿services:
+  vrroomapi:
+    image: vrroomapi
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:8081:8081"
