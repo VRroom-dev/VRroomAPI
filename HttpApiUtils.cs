@@ -80,9 +80,8 @@ public static partial class HttpApi {
 	
 	private static Account? AuthenticateRequest(HttpListenerRequest request) {
 		string? authHeader = request.Headers["Authorization"];
-		if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ")) return null;
-
-		string? handle = ValidateAuthToken(authHeader[7..]);
+		if (string.IsNullOrEmpty(authHeader)) return null;
+		string? handle = ValidateAuthToken(authHeader);
 		return handle == null ? null : DatabaseAccess.Execute(db => db.GetCollection<Account>("accounts").FindOne(x => x.Handle == handle));
 	}
 
