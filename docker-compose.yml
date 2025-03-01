@@ -1,9 +1,47 @@
 ﻿services:
   vrroomapi:
-    image: vrroomapi
     build:
       context: .
-      dockerfile: Dockerfile
+      network: host
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - ConnectionStrings__DefaultConnection=${DATABASE_URL}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__Key=${JWT_KEY}
     ports:
-      - "0.0.0.0:8080:8080"
-      - "0.0.0.0:8081:8081"
+      - "8080:8080"
+      - "8081:8081"
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - /data/VRroom/objects:/app/objects
+    depends_on:
+      postgres:
+        condition: service_healthy
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: VRroom
+      POSTGRES_USER: VRroom
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - /data/VRroom/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    internal: true
