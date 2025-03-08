@@ -6,6 +6,10 @@ public class UpdateBundleModel {
 	public required string DecryptionKey { get; set; }
 }
 
+public class BaseContentModel {
+	public required string ContentId { get; set; }
+}
+
 public class SetActiveBundleModel {
 	public required string ContentId { get; set; }
 	public required string BundleId { get; set; }

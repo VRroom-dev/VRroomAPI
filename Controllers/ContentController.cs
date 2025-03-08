@@ -39,7 +39,26 @@ public class ContentController(
 		string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 		if (userIdString == null || !Guid.TryParse(userIdString, out Guid userId)) return Unauthorized();
 
-		return Ok(dbContext.Content.Where(c => c.OwnerId == userId));
+		IEnumerable<object> response = dbContext.Content
+			.Where(c => c.OwnerId == userId)
+			.Include(c => c.ActiveBundle)
+			.Include(c => c.PreviousVersions)
+			.Select(c => new {
+				c.Id,
+				c.Name,
+				c.Description,
+				c.ContentType,
+				c.ContentWarningTags,
+				c.IsPublic,
+				c.CreatedAt,
+				c.UpdatedAt,
+				c.PublicAt,
+				c.OwnerId,
+				c.ActiveBundleId,
+				PreviousVersions = c.PreviousVersions.Select(b => b.Id)
+			});
+
+		return Ok(response);
 	}
 
 	[HttpGet("{contentId}/Bundles"), Authorize]
@@ -207,9 +226,9 @@ public class ContentController(
 	}
 	
 	[HttpPut("UpdateThumbnail"), Authorize]
-	public async Task<IActionResult> UpdateThumbnail([FromBody] string contentId) {
-		if (!Guid.TryParse(contentId, out Guid id)) return BadRequest("Invalid content GUID");
-		Content? content = await dbContext.Content.FirstOrDefaultAsync(c => c.Id == id);
+	public async Task<IActionResult> UpdateThumbnail([FromBody] BaseContentModel model) {
+		if (!Guid.TryParse(model.ContentId, out Guid contentId)) return BadRequest("Invalid content GUID");
+		Content? content = await dbContext.Content.FirstOrDefaultAsync(c => c.Id == contentId);
 		if (content == null) return NotFound("Content not found");
 		
 		string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -219,7 +238,7 @@ public class ContentController(
 		content.UpdatedAt = DateTime.UtcNow;
 		await dbContext.SaveChangesAsync();
 		
-		return Ok(await storageProvider.GetUploadUrl($"content/{contentId}/thumbnail"));
+		return Ok(await storageProvider.GetUploadUrl($"content/{model.ContentId}/thumbnail"));
 	}
 
 	[HttpPut("SetActiveBundle"), Authorize]
@@ -245,9 +264,9 @@ public class ContentController(
 	}
 
 	[HttpDelete("Delete"), Authorize]
-	public async Task<IActionResult> DeleteContent([FromBody] string contentId) {
-		if (!Guid.TryParse(contentId, out Guid id)) return BadRequest("Invalid content GUID");
-		Content? content = await dbContext.Content.Include(content => content.ShareGroups).FirstOrDefaultAsync(c => c.Id == id);
+	public async Task<IActionResult> DeleteContent([FromBody] BaseContentModel model) {
+		if (!Guid.TryParse(model.ContentId, out Guid contentId)) return BadRequest("Invalid content GUID");
+		Content? content = await dbContext.Content.Include(content => content.ShareGroups).Include(content => content.PreviousVersions).FirstOrDefaultAsync(c => c.Id == contentId);
 		if (content == null) return NotFound("Content not found");
 		
 		string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -256,6 +275,13 @@ public class ContentController(
 
 		ShareGroup defaultGroup = content.ShareGroups.Find(g => g.DefaultGroup)!;
 
+		foreach (Bundle bundle in content.PreviousVersions) {
+			await storageProvider.DeleteObject($"content/{content.Id}/{bundle.Id}");
+		}
+
+		content.ActiveBundle = null;
+		await dbContext.SaveChangesAsync();
+		
 		dbContext.Remove(defaultGroup);
 		dbContext.Content.Remove(content);
 		await dbContext.SaveChangesAsync();

@@ -27,4 +27,8 @@ public class S3Storage : IStorageProvider {
 		
 		return await Client.GetPreSignedURLAsync(request);
 	}
+
+	public async Task DeleteObject(string fileKey) {
+		await Client.DeleteObjectAsync(BucketName, fileKey);
+	}
 }
